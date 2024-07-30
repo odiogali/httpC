@@ -37,5 +37,8 @@ int main() {
     return -1;
   }
 
+  // The tutorial I was following, says to begin listening for a request here but I think, I did this wrong
+  // I should be the TCP client 
+
   return 0;
 }
