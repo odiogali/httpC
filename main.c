@@ -3,9 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <netdb.h>
+#include <unistd.h>
+#include <string.h>
 
 #define PORT "8080"
 #define BACKLOG 10
+#define MAXDATASIZE 1024
+
+void handleRequest(char request[], char *response){
+  strcpy(response, "Request received");
+}
 
 int main(){
   struct addrinfo hints; // will contain basic information about our connection
@@ -20,7 +27,7 @@ int main(){
   int status;
   if ((status = getaddrinfo(NULL, PORT, &hints, &servInfo)) != 0){
     fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
-    return 2;
+    exit(1);
   }
 
   // We should now have a linked list of addrinfo structs - servInfo
@@ -39,19 +46,20 @@ int main(){
 
   if (p == NULL) { // No valid entries found
     fprintf(stderr, "Failed to create socket.\n");
-    exit(3);
+    exit(1);
   }
   
   // Set sock opt to enable reuse of a port after a server is closed
   int yes = 1;
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes) == -1){
     fprintf(stderr, "Failed to set socket option.\n");
-    exit(4);
+    exit(1);
   }
 
   if (bind(sockfd, servInfo->ai_addr, servInfo->ai_addrlen) == -1){
+    close(sockfd);
     fprintf(stderr, "Failed to bind socket to a port.\n");
-    exit(5);
+    exit(1);
   }
 
   freeaddrinfo(servInfo);
@@ -59,20 +67,40 @@ int main(){
   // Listen for incoming connections
   if (listen(sockfd, BACKLOG) < 0){
     fprintf(stderr, "Problem listening.\n");
-    exit(6);
+    exit(1);
   }
 
   printf("Listening on port: %s.\n", PORT);
 
-  struct sockaddr_storage their_addr;
-  socklen_t addr_size = sizeof their_addr;
-  int new_fd; // for socket file descriptor returned by 'accept()'
-  if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size)) < -1){
-    fprintf(stderr, "Accept failed.\n");
-    exit(7);
-  }
+  while (1){
+    struct sockaddr_storage their_addr;
+    socklen_t addr_size = sizeof their_addr;
+    int new_fd; // for socket file descriptor returned by 'accept()'
+    if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size)) < -1){
+      fprintf(stderr, "Accept failed.\n");
+      exit(1);
+    }
 
-  printf("Connection accepted.");
+    printf("Connection accepted.\n");
+
+    char buf[MAXDATASIZE];
+    int read;
+    if ((read = recv(new_fd, buf, MAXDATASIZE - 1, 0)) == -1){
+      fprintf(stderr, "Problem receiving request.\n");
+      exit(1);
+    }
+
+    char response[MAXDATASIZE];
+    handleRequest(buf, response);
+    if (send(new_fd, response, read, 0) < 0) {
+      fprintf(stderr, "Problem sending response.\n");
+      exit(1);
+    }
+
+    printf("Data received: %s\n", buf);
+
+    close(new_fd);
+  }
 
   return 0;
 }
