@@ -6,12 +6,12 @@
 #include <unistd.h>
 #include <string.h>
 
-#define PORT "8080"
+#define PORT "4221"
 #define BACKLOG 10
 #define MAXDATASIZE 1024
 
 void handleRequest(char request[], char *response){
-  strcpy(response, "Request received");
+  strcpy(response, "HTTP/1.1 200 OK\r\n\r\n");
 }
 
 int main(){
@@ -25,7 +25,7 @@ int main(){
   hints.ai_flags = AI_PASSIVE; // fill in my IP for me
   
   int status;
-  if ((status = getaddrinfo(NULL, PORT, &hints, &servInfo)) != 0){
+  if ((status = getaddrinfo(NULL, PORT, &hints, &servInfo)) != 0){ // get this machine's address info
     fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
     exit(1);
   }
@@ -73,10 +73,10 @@ int main(){
   printf("Listening on port: %s.\n", PORT);
 
   while (1){
-    struct sockaddr_storage their_addr;
+    struct sockaddr_storage their_addr; 
     socklen_t addr_size = sizeof their_addr;
     int new_fd; // for socket file descriptor returned by 'accept()'
-    if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size)) < -1){
+    if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size)) < -1){ // when client tries to connect, accept
       fprintf(stderr, "Accept failed.\n");
       exit(1);
     }
