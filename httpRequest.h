@@ -13,10 +13,18 @@ enum HTTPMethod {
   TRACE
 };
 
+typedef struct HTTPHeader {
+  char* name;
+  char* value;
+  struct HTTPHeader* next;
+} HTTPHeader;
+
 typedef struct HTTPRequest {
   int method;
   char* URI;
   float version;
+  struct HTTPHeader* headers;
+  char* body;
 } HTTPRequest;
 
 HTTPRequest request_constructor(char *request_string);
