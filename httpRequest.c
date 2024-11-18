@@ -17,6 +17,17 @@ int method_constructor(char* method_string){
   }
 }
 
+void printHeadersList(struct HTTPHeader* header){
+  struct HTTPHeader *current, *head;
+  head = header;
+
+  current = head;
+  while (current != NULL){
+    printf("Header name: '%s', header value: '%s'\n", current->name, current->value);
+    current = current->next;
+  }
+}
+
 void parseHeaders(HTTPRequest* request, char* header_string){
   int count = 0;
   for (int i = 0; i < strlen(header_string) - 1; i++){
@@ -35,8 +46,28 @@ void parseHeaders(HTTPRequest* request, char* header_string){
     line = strtok(NULL, "\r\n");
   }
 
+  struct HTTPHeader *head, *current;
 
-  
+  current = malloc(sizeof(struct HTTPHeader));
+
+  i = 0;
+  while (i < count){
+    if (i == 0){
+      head = current;
+    }
+    current->name = strtok(headers_split[i], ": ");    
+    current->value = strtok(NULL, ": ");
+    //printf("Current name: '%s', Current value: '%s'\n", current->name, current->value);
+
+    if (++i != count){
+      struct HTTPHeader* new_header = malloc(sizeof(struct HTTPHeader));
+      current->next = new_header;
+      current = current->next;
+    }
+  }
+
+  request->headers = head;
+  printHeadersList(head);
 }
 
 HTTPRequest request_constructor(char *request_string){
