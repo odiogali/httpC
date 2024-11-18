@@ -1,4 +1,5 @@
 /* main.c */
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,9 +89,18 @@ int main() {
       exit(1);
     }
 
-    // For debug purposes, it may be worthwhile to look into printing the IP of
-    // the device that has connected with server
-    printf("Connection accepted.\n\n");
+    // Print client information and note that connection has been accepted
+    struct sockaddr_in client_info;
+    int peer_name;
+    int client_addr_len = sizeof(client_info);
+    if ((peer_name = getpeername(new_fd, (struct sockaddr *) &client_info, (socklen_t*) &client_addr_len)) == -1){
+      printf("Connection accepted.\n\n");
+      fprintf(stderr, "Unable to resolve client information.\n");
+    } else {
+      char client_ip4[INET_ADDRSTRLEN];
+      inet_ntop(AF_INET, &(client_info.sin_addr), client_ip4, INET_ADDRSTRLEN);
+      printf("Connection accepted from client: %s.\n\n", client_ip4);
+    }
 
     char request_string[MAXDATASIZE];
     int read;

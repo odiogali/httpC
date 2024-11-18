@@ -18,6 +18,7 @@ int method_constructor(char* method_string){
 }
 
 void printHeadersList(struct HTTPHeader* header){
+  printf("HEADERS:\n\n");
   struct HTTPHeader *current, *head;
   head = header;
 
@@ -66,8 +67,8 @@ void parseHeaders(HTTPRequest* request, char* header_string){
     }
   }
 
-  request->headers = head;
   printHeadersList(head);
+  request->headers = head;
 }
 
 HTTPRequest request_constructor(char *request_string){
