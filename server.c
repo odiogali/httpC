@@ -11,7 +11,44 @@
 #define BACKLOG 10
 #define MAXDATASIZE 1024
 
+void handleGetRequest(HTTPRequest request, char *response) {
+
+}
+
+void handlePutRequest(HTTPRequest request, char *response) {
+
+}
+
+void handlePostRequest(HTTPRequest request, char *response) {
+
+}
+
+void handleDeleteRequest(HTTPRequest request, char *response) {
+
+}
+
+void handleHeadRequest(HTTPRequest request, char *response) {
+
+}
+
 void handleRequest(HTTPRequest request, char *response) {
+  switch (request.method){
+    case GET:
+      handleGetRequest(request, response);
+      break;
+    case POST:
+      handlePostRequest(request, response);
+      break;
+    case PUT:
+      handlePutRequest(request, response);
+      break;
+    case DELETE:
+      handleDeleteRequest(request, response);
+      break;
+    case HEAD:
+      handleHeadRequest(request, response);
+      break;
+  }
   char buf[MAXDATASIZE] = "HTTP/1.1 200 OK\r\n\r\n";
   strcpy(response, buf);
 }

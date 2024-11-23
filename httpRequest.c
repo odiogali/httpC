@@ -74,8 +74,6 @@ void parseHeaders(HTTPRequest* request, char* header_string){
 HTTPRequest request_constructor(char *request_string){
   HTTPRequest r;
 
-  // printf("BEFORE: Request string is:\n%s\n\n", request_string);
-
   // Seperate request body and headers with |
   for (int i = 0; i < strlen(request_string) - 3; i++){
     if (request_string[i] == '\r' && request_string[i + 1] == '\n' && 
@@ -86,8 +84,6 @@ HTTPRequest request_constructor(char *request_string){
       request_string[i+3] = '|';
     }
   }
-  
-  // printf("AFTER: Request string is:\n%s\n\n", request_string);
   
   // HTTP Request line is first line - ends at \r\n
   // HTTP headers is everything right after the request line but before ||||
@@ -112,3 +108,4 @@ HTTPRequest request_constructor(char *request_string){
 
   return r;
 }
+

@@ -6,11 +6,7 @@ enum HTTPMethod {
   HEAD, 
   POST,
   PUT,
-  PATCH,
   DELETE,
-  CONNECT, 
-  OPTIONS,
-  TRACE
 };
 
 typedef struct HTTPHeader {
