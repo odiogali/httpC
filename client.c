@@ -5,8 +5,11 @@
 #include <unistd.h>
 
 #define PORT "4221"
+#define MAXBUFFSIZE 1024
 
-int main(int argc, char *argv[]) {
+int main() {
+  char buffer[MAXBUFFSIZE] = "Hello, and welcome to the web server.\r\n";
+
   int status;
   struct addrinfo hints;
   struct addrinfo *res;
@@ -34,11 +37,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  char msg[] = "GET / HTTP/1.1\r\n\r\n";
-  int len, bytes_sent;
-  len = sizeof(msg);
+  //char msg[] = "GET / HTTP/1.1\r\n\r\n";
+  int bytes_sent;
 
-  bytes_sent = send(sockfd, msg, len, 0);
+  //bytes_sent = write(sockfd, buffer, sizeof buffer);
+  bytes_sent = send(sockfd, buffer, sizeof buffer, 0);
+  printf("Sent %d bytes.\n", bytes_sent);
+
+  // After finished sending data, client indicates they are done by shutting down write
+  shutdown(sockfd, SHUT_WR);
   
   int bytes_received; 
   char buf[1024];
@@ -48,5 +55,6 @@ int main(int argc, char *argv[]) {
   }
   printf("Bytes received: %d, content received: %s", bytes_received, buf);
 
+  close(sockfd);
   return 0;
 }

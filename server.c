@@ -9,8 +9,9 @@
 
 #define PORT "4221"
 #define BACKLOG 10
-#define MAXDATASIZE 1024
+#define MAXDATASIZE 1000000
 
+/**
 void handleGetRequest(HTTPRequest request, char *response) {
 
 }
@@ -52,6 +53,7 @@ void handleRequest(HTTPRequest request, char *response) {
   char buf[MAXDATASIZE] = "HTTP/1.1 200 OK\r\n\r\n";
   strcpy(response, buf);
 }
+**/
 
 int main() {
   struct addrinfo hints; // will contain basic information about our connection
@@ -91,11 +93,20 @@ int main() {
     exit(1);
   }
 
-  // Set sock opt to enable reuse of a port after a server is closed
+  // Set sock opt to enable reuse of a port after a server is closed 
   int yes = 1;
-  // SOL_SOCKET indicates that reuse option is in the socket
   if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof yes) == -1) {
-    fprintf(stderr, "Failed to set socket option.\n");
+    fprintf(stderr, "Failed to set socket option for reuse of port.\n");
+    exit(1);
+  }
+  
+  struct linger so_linger;
+  so_linger.l_onoff = 1;
+  so_linger.l_linger = 30;
+
+  // SOL_SOCKET indicates that reuse option is in the socket
+  if (setsockopt(sockfd, SOL_SOCKET, SO_LINGER, &so_linger, sizeof so_linger) == -1) {
+    fprintf(stderr, "Failed to set socket option for linger option.\n");
     exit(1);
   }
 
@@ -120,8 +131,7 @@ int main() {
     struct sockaddr_storage their_addr;
     socklen_t addr_size = sizeof their_addr;
     int new_fd; // for socket file descriptor returned by 'accept()'
-    if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size)) <
-        0) { // when client tries to connect, accept
+    if ((new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size)) < 0) { // just accept
       fprintf(stderr, "Accept failed.\n");
       exit(1);
     }
@@ -131,31 +141,33 @@ int main() {
     int peer_name;
     int client_addr_len = sizeof(client_info);
     if ((peer_name = getpeername(new_fd, (struct sockaddr *) &client_info, (socklen_t*) &client_addr_len)) == -1){
-      printf("Connection accepted.\n\n");
+      printf("Connection accepted.\n");
       fprintf(stderr, "Unable to resolve client information.\n");
     } else {
       char client_ip4[INET_ADDRSTRLEN];
       inet_ntop(AF_INET, &(client_info.sin_addr), client_ip4, INET_ADDRSTRLEN);
-      printf("Connection accepted from client: %s.\n\n", client_ip4);
+      printf("Connection accepted from client: %s.\n", client_ip4);
     }
 
     char request_string[MAXDATASIZE];
     int read;
-    if ((read = recv(new_fd, request_string, MAXDATASIZE - 1, 0)) == -1) {
+    if ((read = recv(new_fd, &request_string, MAXDATASIZE - 1, 0)) == -1) {
       fprintf(stderr, "Problem receiving request.\n");
       exit(1);
     }
+    printf("Size of data received: %d\n", read);
+    printf("Data received: %s\n", request_string);
 
-    HTTPRequest request = request_constructor(request_string);
+    //HTTPRequest request = request_constructor(request_string);
 
-    char response[MAXDATASIZE];
-    handleRequest(request, response);
-    if (send(new_fd, response, sizeof(response), 0) < 0) {
+    //char response[MAXDATASIZE];
+    // handleRequest(request, response);
+    if (send(new_fd, &request_string, sizeof(request_string), 0) < 0) {
       fprintf(stderr, "Problem sending response.\n");
       exit(1);
     }
 
-    close(new_fd);
+    //close(new_fd);
   }
 
   return 0;
