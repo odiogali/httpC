@@ -69,7 +69,7 @@ void parseHeaders(HTTPRequest* request, char* header_string){
     }
   }
 
-  printHeadersList(head);
+  //printHeadersList(head);
   request->headers = head;
 }
 

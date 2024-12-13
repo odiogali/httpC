@@ -5,52 +5,90 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include "httpRequest.h"
 
 #define PORT "4221"
 #define BACKLOG 10
-#define MAXDATASIZE 1000000
+#define MAXDATASIZE 1024
 
-void handleGetRequest(HTTPRequest request, char *response) {
-  printf("Handling get request.\n");
+void sendResponse(int fd, char* response){
+    int sent;
+    if ((sent = send(fd, response, strlen(response), 0)) < 0) {
+      fprintf(stderr, "Problem sending response.\n");
+      exit(1);
+    }
+    printf("Size of data sent: %d\n", sent);
+    //printf("Data sent: %s\n", response);
 }
 
-void handlePutRequest(HTTPRequest request, char *response) {
-  printf("Handling get request.\n");
+int handleGetRequest(HTTPRequest request, int sock_fd) {
+  FILE* fptr;
+  char* filename;
+
+  if (strcmp(request.URI, "/") == 0){ 
+    filename = "index.html";
+  } else if (strcmp(request.URI, "/favicon.ico") == 0){ // send website icon when requested
+    int fd = open("favicon.ico", O_RDONLY);
+
+    if (fd == -1){
+      fprintf(stderr, "Could not locate .ico file.\n");
+      return -1;
+    }
+
+    struct stat st;
+    fstat(fd, &st);
+    char buf[MAXDATASIZE];
+    size_t file_size = st.st_size;
+
+    sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Length:%zu\r\n"
+      "Content-Type: image/x-icon\r\n\r\n", file_size);
+    sendResponse(sock_fd, buf);
+
+    char icon_buf[MAXDATASIZE];
+    ssize_t bytes_read;
+    while ((bytes_read = read(fd, icon_buf, sizeof(icon_buf))) > 0) {
+      send(sock_fd, icon_buf, bytes_read, 0);
+    }
+
+    return 0;
+  } else {
+    char buf[MAXDATASIZE];
+    char html[100] = "404: The webpage you are looking for does not exist.\n";
+    sprintf(buf, "HTTP/1.1 404\r\nContent-Length:%lu\r\n"
+      "Content-Type: text/plain; charset=utf-8\r\n\r\n%s", strlen(html), html);
+    sendResponse(sock_fd, buf);
+    return -1;
+  }
+
+  fptr = fopen(filename, "r");
+  char html[600];
+  int counter = 0;
+  while (fgets(&html[counter], 100, fptr) != NULL){
+    counter = strlen(html);
+  }
+  //printf("HTML: %s\n", html);
+  //printf("Strlen: %lu\n", strlen(html));
+
+  char buf[MAXDATASIZE];
+  sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Length:%lu\r\n"
+    "Content-Type: text/html; charset=utf-8\r\n\r\n%s", strlen(html), html);
+  sendResponse(sock_fd, buf);
+
+  fclose(fptr);
+
+  return 0;
 }
 
-void handlePostRequest(HTTPRequest request, char *response) {
-  printf("Handling post request.\n");
-}
-
-void handleDeleteRequest(HTTPRequest request, char *response) {
-  printf("Handling delete request.\n");
-}
-
-void handleHeadRequest(HTTPRequest request, char *response) {
-  printf("Handling head request.\n");
-}
-
-void handleRequest(HTTPRequest request, char *response) {
+void handleRequest(HTTPRequest request, int sock_fd) {
   switch (request.method){
     case GET:
-      handleGetRequest(request, response);
+      handleGetRequest(request, sock_fd);
       break;
-    case POST:
-      handlePostRequest(request, response);
-      break;
-    case PUT:
-      handlePutRequest(request, response);
-      break;
-    case DELETE:
-      handleDeleteRequest(request, response);
-      break;
-    case HEAD:
-      handleHeadRequest(request, response);
-      break;
+    default:
+      printf("The HTTP method indicated is not allowed.\n");
   }
-  char buf[MAXDATASIZE] = "HTTP/1.1 200 OK\r\n\r\n";
-  strcpy(response, buf);
 }
 
 int main() {
@@ -122,7 +160,7 @@ int main() {
     exit(1);
   }
 
-  printf("Listening on port: %s.\n", PORT);
+  printf("Listening on port: %s...\n", PORT);
 
   while (1) {
     struct sockaddr_storage their_addr;
@@ -137,6 +175,8 @@ int main() {
     struct sockaddr_in client_info;
     int peer_name;
     int client_addr_len = sizeof(client_info);
+
+    printf("------------------------------------------------\n");
     if ((peer_name = getpeername(new_fd, (struct sockaddr *) &client_info, (socklen_t*) &client_addr_len)) == -1){
       printf("Connection accepted.\n");
       fprintf(stderr, "Unable to resolve client information.\n");
@@ -148,26 +188,21 @@ int main() {
 
     char request_string[MAXDATASIZE];
     int read;
-    if ((read = recv(new_fd, &request_string, MAXDATASIZE - 1, 0)) == -1) {
+    if ((read = recv(new_fd, &request_string, MAXDATASIZE, 0)) == -1) {
       fprintf(stderr, "Problem receiving request.\n");
       exit(1);
     }
     printf("Size of data received: %d\n", read);
-    printf("Data received: %s\n", request_string);
+    //printf("Data received: %s\n", request_string);
 
     HTTPRequest request; 
     int req_status = request_constructor(request_string, &request);
     if (req_status == -1){
-      fprintf(stderr, "Unable to construct request from message sent.\n");
       continue;
     }
+    printf("Request method: %d, request URI: %s\n", request.method, request.URI);
 
-    char response[MAXDATASIZE];
-    handleRequest(request, response);
-    if (send(new_fd, &request_string, sizeof(request_string), 0) < 0) {
-      fprintf(stderr, "Problem sending response.\n");
-      exit(1);
-    }
+    handleRequest(request, new_fd);
 
     close(new_fd);
   }
