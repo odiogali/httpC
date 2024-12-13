@@ -12,8 +12,10 @@ int method_constructor(char* method_string){
     return PUT;
   } else if(strcmp(method_string, "DELETE") == 0){
     return DELETE;
-  } else {
+  } else if (strcmp(method_string, "HEAD") == 0){
     return HEAD;
+  } else {
+    return -1;
   }
 }
 
@@ -71,9 +73,7 @@ void parseHeaders(HTTPRequest* request, char* header_string){
   request->headers = head;
 }
 
-HTTPRequest request_constructor(char *request_string){
-  HTTPRequest r;
-
+int request_constructor(char *request_string, HTTPRequest* r){
   // Seperate request body and headers with |
   for (int i = 0; i < strlen(request_string) - 3; i++){
     if (request_string[i] == '\r' && request_string[i + 1] == '\n' && 
@@ -93,19 +93,32 @@ HTTPRequest request_constructor(char *request_string){
   char* header_fields = strtok(NULL, "||||");
   char* request_body = strtok(NULL, "||||");
 
+  // Perform checks to avoid null pointer error
+  if (header_fields == NULL){
+    fprintf(stderr, "Message received does not follow the HTTP format.\n");
+    return -1;
+  }
+
   char* request_method = strtok(request_line, " ");
-  r.method = method_constructor(request_method);
-  r.URI = strtok(NULL, " ");
+  r->method = method_constructor(request_method);
+  r->URI = strtok(NULL, " ");
+  if (r->URI == NULL){
+    fprintf(stderr, "URI cannot be null.\n");
+    return -1;
+  }
 
   char* httpVersion = strtok(NULL, "\0");
-  strtok(httpVersion, "/");
+  if (strcmp(strtok(httpVersion, "/"), "HTTP") != 0){
+    fprintf(stderr, "Format for HTTP version is incorrect.\n");
+    return -1;
+  }
   httpVersion = strtok(NULL, "/");
-  r.version = atof(httpVersion);
+  r->version = atof(httpVersion);
 
-  parseHeaders(&r, header_fields);
+  parseHeaders(r, header_fields);
 
-  r.body = request_body;
+  r->body = request_body;
 
-  return r;
+  return 0;
 }
 

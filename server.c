@@ -11,25 +11,24 @@
 #define BACKLOG 10
 #define MAXDATASIZE 1000000
 
-/**
 void handleGetRequest(HTTPRequest request, char *response) {
-
+  printf("Handling get request.\n");
 }
 
 void handlePutRequest(HTTPRequest request, char *response) {
-
+  printf("Handling get request.\n");
 }
 
 void handlePostRequest(HTTPRequest request, char *response) {
-
+  printf("Handling post request.\n");
 }
 
 void handleDeleteRequest(HTTPRequest request, char *response) {
-
+  printf("Handling delete request.\n");
 }
 
 void handleHeadRequest(HTTPRequest request, char *response) {
-
+  printf("Handling head request.\n");
 }
 
 void handleRequest(HTTPRequest request, char *response) {
@@ -53,7 +52,6 @@ void handleRequest(HTTPRequest request, char *response) {
   char buf[MAXDATASIZE] = "HTTP/1.1 200 OK\r\n\r\n";
   strcpy(response, buf);
 }
-**/
 
 int main() {
   struct addrinfo hints; // will contain basic information about our connection
@@ -79,8 +77,7 @@ int main() {
 
   // Create a new socket so local machine (server) can communicate with clients
   for (p = servInfo; p != NULL; p = p->ai_next) {
-    int s = socket(servInfo->ai_family, servInfo->ai_socktype,
-                   servInfo->ai_protocol);
+    int s = socket(servInfo->ai_family, servInfo->ai_socktype, servInfo->ai_protocol);
 
     if (s != -1) {
       sockfd = s;
@@ -158,16 +155,21 @@ int main() {
     printf("Size of data received: %d\n", read);
     printf("Data received: %s\n", request_string);
 
-    //HTTPRequest request = request_constructor(request_string);
+    HTTPRequest request; 
+    int req_status = request_constructor(request_string, &request);
+    if (req_status == -1){
+      fprintf(stderr, "Unable to construct request from message sent.\n");
+      continue;
+    }
 
-    //char response[MAXDATASIZE];
-    // handleRequest(request, response);
+    char response[MAXDATASIZE];
+    handleRequest(request, response);
     if (send(new_fd, &request_string, sizeof(request_string), 0) < 0) {
       fprintf(stderr, "Problem sending response.\n");
       exit(1);
     }
 
-    //close(new_fd);
+    close(new_fd);
   }
 
   return 0;

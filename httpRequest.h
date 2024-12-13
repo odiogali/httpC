@@ -20,9 +20,9 @@ typedef struct HTTPRequest {
   char* URI;
   float version;
   struct HTTPHeader* headers;
-  char* body;
+  char* body; // Body can be null - so check
 } HTTPRequest;
 
-HTTPRequest request_constructor(char *request_string);
+int request_constructor(char *request_string, HTTPRequest* request);
 
 #endif

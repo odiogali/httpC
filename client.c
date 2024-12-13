@@ -22,13 +22,13 @@ int main() {
   status = getaddrinfo("127.0.0.1", PORT, &hints, &res); // get address info of the server machine
   if (status == -1){
     printf("Get addrinfo failed.\n");
-    return -1;
+    exit(-1);
   }
 
   int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
   if (sockfd == -1){
     printf("Failed to initialize socket.\n");
-    return -1;
+    exit(-1);
   }
 
   if (connect(sockfd, res->ai_addr, res->ai_addrlen) == -1){ // connect local machine to server using the socket
@@ -44,9 +44,10 @@ int main() {
   bytes_sent = send(sockfd, buffer, sizeof buffer, 0);
   printf("Sent %d bytes.\n", bytes_sent);
 
-  // After finished sending data, client indicates they are done by shutting down write
+  // After finished sending data, client indicates completion by shutting down write functionality
   shutdown(sockfd, SHUT_WR);
   
+  /**
   int bytes_received; 
   char buf[1024];
   if ((bytes_received = recv(sockfd, &buf, sizeof buf, 0))== -1){
@@ -54,6 +55,7 @@ int main() {
     return -1;
   }
   printf("Bytes received: %d, content received: %s", bytes_received, buf);
+  **/
 
   close(sockfd);
   return 0;
