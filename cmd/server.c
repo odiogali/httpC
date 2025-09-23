@@ -24,6 +24,7 @@ int main() {
   reader_t reader = {0};
   int done = 0; // whether we are finished reading from file or not
 
+  // We have the sentence buffer in the reader and the temp buffer
   // First read into temporary buffer, then store in reader's buffer
   int temp_buf_size = 8; // For now, our temp buf size = 8
   char *temp = malloc(sizeof(char) * temp_buf_size);
@@ -34,13 +35,13 @@ int main() {
     free_space = temp_buf_size - temp_read; // space left in buffer
     // fill remaining space in buffer
     size_t read = fread(temp + temp_read, sizeof(char), free_space, file);
-    temp_read += read; // note how much more space we have
+    temp_read += read; // Update how full temp buffer is
 
-    // if we ran out of data...
+    // if we ran out of data to read...
     if (read < free_space)
       done = 1;
 
-    // Find the index of the newline
+    // Find the first index of the newline in entire buffer
     int idx = -1;
     for (int i = 0; i < temp_read; i++) {
       if (temp[i] == '\n') {
@@ -52,6 +53,7 @@ int main() {
     // We read up to \n if it exists
     size_t toCopy = (idx == -1) ? temp_read : idx;
 
+    // Realloc could fail so we don't want to directly assign to the reader.buf
     char *another_temp = realloc(reader.buf, reader.buf_size + toCopy);
     if (another_temp == NULL) {
       perror("realloc");
@@ -62,10 +64,13 @@ int main() {
     reader.buf = another_temp;
     reader.buf_size += toCopy;
 
+    free(another_temp);
+
     size_t skip = (idx == -1) ? toCopy : (toCopy + 1);
     memmove(temp, temp + skip, temp_read - skip);
     temp_read -= skip;
 
+    // When we have gotten to the end of a newline, reset the reader buffer
     if (idx != -1) {
       print_buffer(reader.buf, reader.buf_size);
       reader.buf = NULL;
