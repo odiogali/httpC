@@ -1,7 +1,4 @@
-all: server client
+all: server
+server: cmd/server.c
+	cc -Wall -Wextra -o server cmd/server.c utils/channel.c -lpthread
 
-server: server.c
-	cc -Wall -Wextra -o server server.c httpRequest.h httpRequest.c 
-
-client: client.c
-	cc -Wall -Wextra -o client client.c

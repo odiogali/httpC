@@ -1,88 +1,78 @@
+#include "server.h"
+#include <pthread.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void print_buffer(char *buf, size_t n) {
-  printf("read: ");
-  fwrite(buf, sizeof(char), n, stdout);
-  printf("\n");
-}
+void *get_lines(void *arg) {
+  int *result = malloc(sizeof(int));
+  channel *ch = (channel *)arg;
 
-typedef struct reader {
-  char *buf;    // buffer holding sentence; only holds what is read
-  int buf_size; // total size of allocated space
-} reader_t;
-
-int main() {
   FILE *file = fopen("message.txt", "r");
   if (file == NULL) {
     perror("fopen");
-    return -1;
+    *result = -1;
+    return result;
   }
 
-  reader_t reader = {0};
-  int done = 0; // whether we are finished reading from file or not
+  char buf[9];
+  char *line = calloc(1, 1);
 
-  // We have the sentence buffer in the reader and the temp buffer
-  // First read into temporary buffer, then store in reader's buffer
-  int temp_buf_size = 8; // For now, our temp buf size = 8
-  char *temp = malloc(sizeof(char) * temp_buf_size);
-  int temp_read = 0; // How full is temp buf?
-  int free_space = temp_buf_size;
+  int read;
+  while ((read = fread(buf, sizeof(char), 8, file)) > 0) {
+    buf[read] = '\0';
 
-  while (1) {
-    free_space = temp_buf_size - temp_read; // space left in buffer
-    // fill remaining space in buffer
-    size_t read = fread(temp + temp_read, sizeof(char), free_space, file);
-    temp_read += read; // Update how full temp buffer is
+    char *start = buf;
+    for (int i = 0; i < 8; i++) {
+      if (buf[i] == '\n') {
+        buf[i] = '\0';
 
-    // if we ran out of data to read...
-    if (read < free_space)
-      done = 1;
+        char *temp = malloc(strlen(buf) + strlen(line) + 1);
+        strcpy(temp, line);
+        strcat(temp, buf);
 
-    // Find the first index of the newline in entire buffer
-    int idx = -1;
-    for (int i = 0; i < temp_read; i++) {
-      if (temp[i] == '\n') {
-        idx = i;
-        break;
+        channel_send(ch, temp);
+        free(line);
+        free(temp);
+        line = calloc(1, 1);
+
+        start = &buf[i + 1];
       }
     }
 
-    // We read up to \n if it exists
-    size_t toCopy = (idx == -1) ? temp_read : idx;
-
-    // Realloc could fail so we don't want to directly assign to the reader.buf
-    char *another_temp = realloc(reader.buf, reader.buf_size + toCopy);
-    if (another_temp == NULL) {
-      perror("realloc");
-      return -1;
-    }
-    memcpy(another_temp + reader.buf_size, temp, toCopy);
-
-    reader.buf = another_temp;
-    reader.buf_size += toCopy;
-
-    free(another_temp);
-
-    size_t skip = (idx == -1) ? toCopy : (toCopy + 1);
-    memmove(temp, temp + skip, temp_read - skip);
-    temp_read -= skip;
-
-    // When we have gotten to the end of a newline, reset the reader buffer
-    if (idx != -1) {
-      print_buffer(reader.buf, reader.buf_size);
-      reader.buf = NULL;
-      reader.buf_size = 0;
-    }
-
-    if (done)
-      break;
+    char *temp = malloc(strlen(start) + strlen(line) + 1);
+    strcpy(temp, line);
+    strcat(temp, start);
+    free(line);
+    line = temp;
   }
 
-  free(reader.buf);
+  if (strlen(line) > 0) {
+    channel_send(ch, line);
+  }
+
+  channel_send(ch, "");
+  free(line);
   fclose(file);
 
+  *result = 0;
+  return result;
+}
+
+int main() {
+  channel ch;
+  channel_init(&ch);
+
+  pthread_t thread;
+  pthread_create(&thread, NULL, get_lines, &ch);
+
+  char msg[MAX_MSG_LEN];
+  while (channel_receive(&ch, msg)) {
+    printf("%s\n", msg);
+  }
+
+  pthread_join(thread, NULL);
   return 0;
 }
